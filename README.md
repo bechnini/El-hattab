@@ -59,12 +59,12 @@ float last_turn_error = 0;
 int turn_base_speed = 30; 
 int max_pwm = 70;
 
-// ─── Maze Solver Settings ─────────────────────────────────
-#define WALL_THRESHOLD  18    // cm — treat anything closer as a wall
-#define TURN_SPEED      170   // motor speed during gyro turns
-#define FORWARD_CHECK   12    // cm — front wall triggers a turn decision
-#define CELL_DRIVE_MS   300   // ms to drive into new cell after a turn (tune this)
+#define WALL_THRESHOLD  18   
+#define TURN_SPEED      170  
+#define FORWARD_CHECK   12   
+#define CELL_DRIVE_MS   300  
 ```
+Global Variables
 ```
 long readSensor(int trig, int echo) {
   digitalWrite(trig, LOW);
