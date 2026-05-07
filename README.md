@@ -3,22 +3,17 @@
 An autonomous maze-solving robot built with Arduino, utilizing three ultrasonic sensors for spatial awareness and an MPU6050 IMU for precise directional control. The robot employs a wall-following algorithm combined with a dual-PID system to maintain stability and accuracy that used to compete in insat robolympix 4.0 in the autonomous challenge.
 
 ## Code explanation
+
 ```
- 
 #include <Wire.h>
 #include <MPU6050_tockn.h>
 ```
-
-
-
 Libraries needed for the MPU6050 to work
 
 ```
  MPU6050 mpu6050(Wire);
 ```
-
-
-Initialazing the mpu605à
+Initialazing the mpu6050
 
 ```
 int in1 = 6;   // Left motor PWM forward
@@ -70,9 +65,198 @@ int max_pwm = 70;
 #define FORWARD_CHECK   12    // cm — front wall triggers a turn decision
 #define CELL_DRIVE_MS   300   // ms to drive into new cell after a turn (tune this)
 ```
+```
+long readSensor(int trig, int echo) {
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  long duration = pulseIn(echo, HIGH, 30000);
+  if (duration == 0) return sensorMax;
+  long dist = duration * 0.034 / 2;
+  return constrain(dist, sensorMin, sensorMax);
+}
+```
+Reading ultasonic sensor value
+
+```
+float sfront() {
+  float sum = 0;
+  for (int i = 0; i < READINGS; i++) sum += readSensor(trig1, echo1);
+  return sum / READINGS;
+}
+
+float sleft() {
+  float sum = 0;
+  for (int i = 0; i < READINGS; i++) sum += readSensor(trig2, echo2);
+  return sum / READINGS;
+}
+
+float sright() {
+  float sum = 0;
+  for (int i = 0; i < READINGS; i++) sum += readSensor(trig3, echo3);
+  return sum / READINGS;
+}
+```
+Reading Average values for each sensor
+
+```
+void stopMotors() {
+  analogWrite(in1, 0); analogWrite(in2, 0);
+  analogWrite(in3, 0); analogWrite(in4, 0);
+}
+
+void driveForward(int spd) {
+  analogWrite(in1, spd); analogWrite(in2, 0);
+  analogWrite(in3, spd); analogWrite(in4, 0);
+}
+
+void setMotors(int l, int r) {
+  analogWrite(in1, constrain(l, 0, 255)); analogWrite(in2, 0);
+  analogWrite(in3, constrain(r, 0, 255)); analogWrite(in4, 0);
+}
+```
+Functions to control motors
+
+```
+void pidStep() {
+  mpu6050.update();
+  float error = sleft() - sright();
+  integral += error;
+  integral = constrain(integral, -100, 100);
+  derivative = error - preverror;
+  float correction = Kp * error + Ki * integral + Kd * derivative;
+  int l = constrain(basespeed + correction, minspeed, maxspeed);
+  int r = constrain(basespeed - correction, minspeed, maxspeed);
+  setMotors(l, r);
+  preverror = error;
+}
+```
+The PID
+
+```
+void pivotToAngle(float target_angle) {
+  t=millis();
+  while (true) {
+    mpu6050.update();
+    float current_yaw = mpu6050.getAngleZ();
+    float turn_error = target_angle - current_yaw;
+
+    // 1. Exit condition (Within 1 degree)
+    if (abs(turn_error) < 5) {
+      stopMotors();
+      break;
+    }
+    if(millis()-t>2500){
+      break;
+    }
 
 
-Global variables
+    float turn_diff = turn_error - last_turn_error;
+    float turn_correction = (p_turn * turn_error) + (d_turn * turn_diff);
+    last_turn_error = turn_error;
+    int motor_pwm = constrain(turn_base_speed + abs(turn_correction), 0, max_pwm);
+    if (turn_error > 0) {
+      // TURN LEFT: Left back, Right forward
+      analogWrite(in1, motor_pwm);         analogWrite(in2, 0); // Left motor back
+      analogWrite(in3, 0); analogWrite(in4, motor_pwm);         // Right motor forward
+    } else {
+      // TURN RIGHT: Left forward, Right back
+      analogWrite(in1,0 ); analogWrite(in2, motor_pwm);         // Left motor forward
+      analogWrite(in3, motor_pwm);         analogWrite(in4, 0); // Right motor back
+    }
+  }
+  tangle=target_angle;
+  integral=0;preverror=0;
+}
+```
+Pivots to a specefic angle using PID to be precise while turning
+
+```
+void uTurn() {
+  pivotToAngle(78);
+  delay(100);
+  pivotToAngle(78);
+}
+
+```
+U turn
+
+```
+void setup() {
+  Wire.begin();
+  mpu6050.begin();
+
+  pinMode(in1, OUTPUT); pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT); pinMode(in4, OUTPUT);
+
+  pinMode(trig1, OUTPUT); pinMode(echo1, INPUT);
+  pinMode(trig2, OUTPUT); pinMode(echo2, INPUT);
+  pinMode(trig3, OUTPUT); pinMode(echo3, INPUT);
+  pinMode(led,OUTPUT);
+  pinMode(startButton , INPUT);
+
+
+
+  Serial.begin(9600);
+  
+  mpu6050.calcGyroOffsets(true);
+
+    while (digitalRead(startButton) == LOW) {
+    digitalWrite(led, (millis() / 500) % 2); 
+    delay(50); 
+  } 
+
+  delay(50); 
+}
+```
+The setup
+
+```
+void loop() {
+
+  pidStep();
+  if(right()){
+    
+    digitalWrite(led,100);
+    driveForward(basespeed);
+    delay(50); 
+    stopMotors();
+    delay(150);
+    pivotToAngle(tangle-79);
+    digitalWrite(led,0);
+    stopMotors();
+    delay(150);
+    t=millis();
+    while(millis()-t<650){
+      pidStep();
+    }
+    }
+    else if(left() && !forward() && !right()){
+        digitalWrite(led,100);
+         driveForward(basespeed);
+        delay(50);
+        stopMotors();
+        delay(150);
+        pivotToAngle(tangle+79);
+        digitalWrite(led,0);
+        stopMotors();
+        delay(100);
+        t=millis();
+        while(millis()-t<650){
+          pidStep();
+        }
+    }
+
+    else if(!left() && !forward() && !right()){
+      digitalWrite(led,100);
+      pivotToAngle(tangle-165);
+      digitalWrite(led,0);
+      delay(50);
+    }
+```
+The algorithm
 
 
 ## 🛠 Navigation Logic: The Algorithm
