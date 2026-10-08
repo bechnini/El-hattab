@@ -1,8 +1,8 @@
-# Maze-Solving Robot (MPU6050 + PID Control)
+#  Maze-Solving Robot (MPU6050 + PID Control)
 
 An autonomous maze-solving robot built with Arduino, utilizing three ultrasonic sensors for spatial awareness and an MPU6050 IMU for precise directional control. The robot employs a wall-following algorithm combined with a dual-PID system to maintain stability and accuracy that used to compete in insat robolympix 4.0 in the autonomous challenge.
 
-## Code explanation
+##  Code explanation
 
 ```
 #include <Wire.h>
@@ -256,10 +256,9 @@ void loop() {
       delay(50);
     }
 ```
-The algorithm
 
 
-## 🛠 Navigation Logic: The Algorithm
+##  Navigation Logic: The Algorithm
 
 The robot implements the **Right-Hand Rulex (Wall Follower). This is an "uninformed" maze-solving algorithm where the robot treats the maze walls as a single continuous surface, keeping the right wall at a constant relative distance.
 
@@ -271,7 +270,7 @@ The robot implements the **Right-Hand Rulex (Wall Follower). This is an "uninfor
 
 ---
 
-## 🧠 PID Control Implementation
+##  PID Control Implementation
 
 The project uses two distinct PID controllers to handle different movement states.
 
@@ -293,7 +292,7 @@ Precise $90^\circ$ turns are difficult with simple timers due to battery voltage
 
 ---
 
-## 🔌 Hardware Mapping
+##  Hardware Mapping
 
 | Component | Pin | Function |
 | :--- | :--- | :--- |
@@ -308,7 +307,7 @@ Precise $90^\circ$ turns are difficult with simple timers due to battery voltage
 
 ---
 
-## 🚀 Setup and Usage
+##  Setup and Usage
 
 1.  **Calibration:** On power-up, the robot waits for the `startButton`. During this time, the MPU6050 is calibrated. The robot must remain perfectly still.
 2.  **PID Tuning:** * Adjust `Kp`, `Ki`, and `Kd` to stabilize forward walking.
